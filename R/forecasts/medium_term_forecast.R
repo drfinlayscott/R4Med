@@ -38,7 +38,7 @@ library(reshape2)
 # Example data set - use your own
 # You need a full specified FLStock object
 # Here I'm loading a dummy stock object
-load("../data/stk.RData")
+load("../../data/stk.RData")
 # Load your own data, probably using the load() function
 
 # Quick check that the stock object is correct
@@ -79,15 +79,6 @@ steepness <- 0.75
 srr_sv <- fmle(as.FLSR(stk, model = "bevholtSV"),
                fixed = list(s = steepness, spr0 = spr0),
                model="Brent")
-
-
-srr_sv <- fmle(as.FLSR(stk, model = "bevholtSV"))
-srr <- fmle(as.FLSR(stk, model = "bevholt"))
-
-data(ple4)
-srr_sv <- fmle(as.FLSR(ple4, model = "bevholt"))
-srr_sv <- fmle(as.FLSR(ple4, model = "bevholtSV"))
-
 
 # Is the fit any good? 
 plot(srr_sv)
