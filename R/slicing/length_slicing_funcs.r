@@ -103,6 +103,12 @@ knife_edge=function(dat,vB,timing=0.5,plusGroup=30,minage=1)
 # (There must be a more sophisticated way of doing this)
 get_prop <- function(L1, L2, Latage1, Latage2)
 {
+    # Checks
+    if ((L1 < 0) | (L2 < 0) | (Latage1 < 0) | (Latage2 < 0))
+        stop("Lengths can not be less than 0.")    
+    if ((L1 > L2) | (Latage1 > Latage2)){
+        stop("First length is greater than second length.")
+    }
     prop_out <- NA
     if (L1 < Latage1 & L2 < Latage2) prop_out <- 0 # outside to the left
     if (L1 > Latage2 & L2 > Latage2) prop_out <- 0 # outside to the right
