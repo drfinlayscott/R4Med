@@ -35,7 +35,7 @@ library(FLBRP)
 # Example data set - use your own
 # You need a full specified FLStock object
 # Here I'm loading a dummy stock object
-load("../data/stk.RData")
+load("../../data/stk.RData")
 # Load your own data, probably using the load() function
 
 # Quick check that the stock object is correct
@@ -63,7 +63,9 @@ fbar_status_quo <- exp(mean(log(c(fbars))))
 # You can change these as appropriate
 # The first year of the STF should be the next one after the final year in your stock data
 # For example, the final year in the dummy stk object is 2012 so the first year of the STF is 2013
-stf_years <- c(2013,2014,2015)
+stf_nyears <- 3
+final_year <- max(as.numeric(dimnames(stock.n(stk))[[2]]))
+stf_years <- (final_year+1):(final_year+stf_nyears)
 no_stf_years <- length(stf_years)
 
 # Set up the future stock object.
@@ -105,8 +107,18 @@ fbar_scenarios <- rbind(fbar_scenarios, c(fbar_status_quo,f01,f01))
 # There are various results we want to extract from the STF
 # Make an empty matrix in which to store the results
 stf_results <- matrix(NA,nrow = nrow(fbar_scenarios),ncol = 10)
-# Change the column names to reflect years
-colnames(stf_results) <- c('Ffactor','Fbar','Catch_2012','Catch_2013','Catch_2014','Catch_2015','SSB_2014','SSB_2015','Change_SSB_2014-2015(%)','Change_Catch_2012-2014(%)')
+
+# Update column names
+colnames(stf_results) <- c('Ffactor',
+                           'Fbar',
+                           paste('Catch',final_year,sep="_"),
+                           paste('Catch',final_year+1,sep="_"), 
+                           paste('Catch',final_year+2,sep="_"),
+                           paste('Catch',final_year+3,sep="_"),
+                           paste('SSB',final_year+2,sep="_"),
+                           paste('SSB',final_year+3,sep="_"),
+                           paste('Change_SSB_',final_year+2,'-',final_year+3,'(%)',sep=""),
+                           paste('Change_Catch_',final_year,'-',final_year+2,'(%)',sep=""))
 
 # Store the FLStock each time
 stk_stf <- FLStocks()
@@ -130,24 +142,24 @@ for (scenario in 1:nrow(fbar_scenarios)) {
 
     # Fill results table
     stf_results[scenario,1] <- fbar_scenarios[scenario,2] / fbar_scenarios[scenario,1] # fbar status quo ratio
-    stf_results[scenario,2] <- fbar(stk_stf_fwd)[,ac(2015)] # final stf year
-    stf_results[scenario,3] <- catch(stk_stf_fwd)[,ac(2012)] # last 'true' year
-    stf_results[scenario,4] <- catch(stk_stf_fwd)[,ac(2013)] # 1st stf year
-    stf_results[scenario,5] <- catch(stk_stf_fwd)[,ac(2014)] # 2nd stf year
-    stf_results[scenario,6] <- catch(stk_stf_fwd)[,ac(2015)] # final stf year
-    stf_results[scenario,7] <- ssb(stk_stf_fwd)[,ac(2014)] # 2nd stf year
-    stf_results[scenario,8] <- ssb(stk_stf_fwd)[,ac(2015)] # final stf year
+    stf_results[scenario,2] <- fbar(stk_stf_fwd)[,ac(stf_years[stf_nyears])] # final stf year
+    stf_results[scenario,3] <- catch(stk_stf_fwd)[,ac(final_year)] # last 'true' year
+    stf_results[scenario,4] <- catch(stk_stf_fwd)[,ac(final_year+1)] # 1st stf year
+    stf_results[scenario,5] <- catch(stk_stf_fwd)[,ac(final_year+2)] # 2nd stf year
+    stf_results[scenario,6] <- catch(stk_stf_fwd)[,ac(final_year+3)] # final stf year
+    stf_results[scenario,7] <- ssb(stk_stf_fwd)[,ac(final_year+2)] # 2nd stf year
+    stf_results[scenario,8] <- ssb(stk_stf_fwd)[,ac(final_year+3)] # final stf year
     # Change in SSB
-    stf_results[scenario,9] <- (ssb(stk_stf_fwd)[,ac(2015)]-ssb(stk_stf_fwd)[,ac(2014)])/ssb(stk_stf_fwd)[,ac(2014)]*100 # change in ssb in last two stf years
-    stf_results[scenario,10] <- (catch(stk_stf_fwd)[,ac(2014)]-catch(stk_stf_fwd)[,ac(2012)])/catch(stk_stf_fwd)[,ac(2012)]*100 # change in catch from true year, to 2nd to last stf year
+    stf_results[scenario,9] <- (ssb(stk_stf_fwd)[,ac(final_year+3)]-ssb(stk_stf_fwd)[,ac(final_year+2)])/ssb(stk_stf_fwd)[,ac(final_year+2)]*100 # change in ssb in last two stf years
+    stf_results[scenario,10] <- (catch(stk_stf_fwd)[,ac(final_year+2)]-catch(stk_stf_fwd)[,ac(final_year)])/catch(stk_stf_fwd)[,ac(final_year)]*100 # change in catch from true year, to 2nd to last stf year
 }
 
 # Look at the table of results
 stf_results
 # export this if necessary
-write.csv(stf_results, file="stf_results.csv")
+#write.csv(stf_results, file="stf_results.csv")
 
 # Plotting
 # Plotting is not necessary for the report but here is a crude one anyway
-plot(window(stk_stf, start=2001, end=2015))
-
+plot(window(stk_stf, start=2001, end=final_year+3))
+stf_results
