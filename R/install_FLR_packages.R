@@ -26,6 +26,7 @@
 # copula
 # plyr
 # ggplot2
+# gridExtra
 # using the normal install.packages() command
 
 # To install FLR packages use the command:
