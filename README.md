@@ -9,7 +9,7 @@ The repository was started in Brussels, December 2013
 
 To make your life easier, before each meeting you should:
 
-1. Install the latest version of R.
+1. Install the latest version of R (32-bit)
 2. Install the important dependency packages, using install.packages():
 
     * triangle
