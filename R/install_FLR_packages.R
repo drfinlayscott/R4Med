@@ -17,19 +17,26 @@
 
 #--------------------------------------------------------------------------
 # This small script installs the latest FLR packages.
-# They have been for R-3.0.2.
-# They may also work with R-3.0.1 but there will be a warning.
+# They are for R >= 3.0
+
+# Some of the FLR packages have dependencies on other non-FLR packages.
+# So you should install:
+# triangle
+# copula
+# plyr
+# ggplot2
+# using the normal install.packages() command
 
 # To install FLR packages use the command:
 
 # One package at a time
-install.packages(pkgs = "FLCore", repos="http://flr-project.org/Rdevel")
+install.packages(pkgs = "FLCore", repos="http://flr-project.org/R")
 
 # Or all of them together
-install.packages(pkgs = c("FLCore","FLash","FLAssess","FLXSA","ggplotFL","FLBRP","FLa4a"), repos="http://flr-project.org/Rdevel")
+install.packages(pkgs = c("FLCore","FLash","FLAssess","FLXSA","ggplotFL","FLBRP","FLa4a"), repos="http://flr-project.org/R")
 
 # If you are not using RStudio you can just do:
-install.packages(repos="http://flr-project.org/Rdevel")
+install.packages(repos="http://flr-project.org/R")
 # and select the packages from window that opens
 
 # The packages to install:
