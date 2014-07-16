@@ -18,6 +18,28 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 #------------------------------------------------------------------
+
+# This script demonstrates how an approximate multifleet projection
+# can be run using the FLR tools (fwd()).
+# In the example a typical Short Term Forecast is run (based on the
+# short_term_forecast.R script) that projects the stock forward
+# under a range of different fishing mortality scenarios.
+
+# The resulting catches of the projection are then split between 
+# the fleets. The split is based on either the historical partial
+# catches or fishing mortalities.
+
+# In the projections, the future fishing mortality pattern at age (the
+# selectivity is always the same) implying that the relative activity
+# of each of the fleets is the same. 
+
+# Another script is in the repository.
+# This looks at how it may be possible to explore the consequences
+# of one or more fleets increasing or decreasing their fishing effort.
+# For example, what might happen if one of the fleets stops operating.
+
+#------------------------------------------------------------------
+
 # Ingredients
 # 1. A full FLStock i.e. results of a stock assessment.
 # 2. Some way of estimating the selectivity patterns of the fleets.
@@ -26,7 +48,7 @@
 
 #------------------------------------------------------------------
 # Install packages if you don't have them.
-# Use R 3.1
+# Use R >= 3.0
 
 ## from CRAN
 #install.packages(c("copula","triangle","ggplot2"))
@@ -58,7 +80,7 @@ idxs <- readFLIndices("../../data/sole_gsa17/TUNEFF.DAT")
 # FLStock - the output from the SS3 assessment
 load("../../data/sole_gsa17/stk.Rdata") 
 
-# Use FLa4a to rerun the assessment
+# Here we use FLa4a to rerun the assessment
 fmodel <- ~te(age, year, k = c(4, 10)) + s(year, k = 5, by = as.numeric(as.numeric(age == 1)))
 qmodel <- list(~s(age, k=3))
 rmodel <- ~factor(year)
@@ -72,36 +94,40 @@ sole <- sole + fit
 # Check out the results
 plot(sole)
 
+# This is the starting point of the example.
+
 #------------------------------------------------------------------
 # We are really running a 'single' fleet projection.
-# The fishing mortality pattern of this single fleet is the sum of the fishing mortality pattern of the fleets.
+# The fishing mortality pattern of this single fleet is the sum of the
+# fishing mortality pattern of the fleets.
 # In this example we have 3 fleets (set net, trammel net, trawl).
 
-# We are going to run projections using different scenarios.
+# We are going to run Short Term Forecast with different F levels.
 # These scenarios will use the same selection pattern for the future years.
 # This selection pattern represents the combined selectivity of the fleets.
-# The estimated catches and fishing mortalities from the forecast will be partioned using the partial catches.
+# The selection pattern of each fleet is based on the partial fishing
+# mortality of each fleet. We have estimate this.
+# Here we estimate the partial fishing mortalities by calculating the
+# partial catches of the fleets.
 
-# Here we calculate the partial fishing mortalities by calculating the partial catches of the fleets.
-
-# Sole GSA 17 has three fleets
+# In this example we use Sole in GSA 17 which has three fleets
 # Set net
 # Trammel net
 # Trawl
 
-# The data is stored in separate csv files.
+# The partial catch data is stored in separate csv files.
 # We read each of them in and make FLQuant objects from them.
 
 # Read in catch numbers from the fleets and make FLQuants of them
-set_net <- read.csv("data/catch_data/ITA_SET_NET.csv", header=TRUE, sep=";")
+set_net <- read.csv("../../data/sole_gsa17/ITA_SET_NET.csv", header=TRUE, sep=";")
 set_net <- FLQuant(t(as.matrix(set_net)[,2:8]), dimnames=list(age=0:6,year=2000:2012))
 # for example
 set_net
 
-trawl <- read.csv("data/catch_data/ITA_TRAWL.csv", header=TRUE, sep=";")
+trawl <- read.csv("../../data/sole_gsa17/ITA_TRAWL.csv", header=TRUE, sep=";")
 trawl <- FLQuant(t(as.matrix(trawl)[,2:8]), dimnames=list(age=0:6,year=2000:2012))
 
-tram <- read.csv("data/catch_data/SLO_CRO_TRAMMEL.csv", header=TRUE, sep=";")
+tram <- read.csv("../../data/sole_gsa17/SLO_CRO_TRAMMEL.csv", header=TRUE, sep=";")
 tram <- FLQuant(t(as.matrix(tram)[,2:8]), dimnames=list(age=0:6,year=2000:2012))
 
 # Calculate the proportion of catches from each fleet
@@ -111,12 +137,16 @@ prop_catches <- lapply(catches, function(x) x / total_catch)
 # What do these look like?
 ggplot(as.data.frame(prop_catches), aes(x=age,y=data)) + geom_line(aes(colour=qname)) + facet_wrap(~year)
 
-# We can also calculate the mean partial catch proportions over the period
+# We also calculate the mean partial catch proportions over the period
 # 2006 to 2012
+# This is the period we will use to calculate the future selectivity
+# of each fleet.
 mean_catches <- lapply(catches, function(x) apply(x[,as.character(2006:2012)],c(1,3:6),mean))
 total_mean_catches <- mean_catches[["set_net"]] + mean_catches[["trawl"]] + mean_catches[["tram"]]
 # Get the proprtion of mean catches taken by each fleet
+# We will use this later to partition the projected catches.
 prop_mean_catches <- lapply(mean_catches, function(x) x / total_mean_catches)
+ggplot(as.data.frame(prop_mean_catches), aes(x=age,y=data)) + geom_line(aes(colour=qname)) 
 
 # We now calculate the partial fishing mortalities of each fleet
 # pF = catch proportion of each fleet * estimated harvest rate from the stock assessment
@@ -127,7 +157,8 @@ ggplot(pfs_df[pfs_df$year>2003,], aes(x=age, y=data)) + geom_line(aes(colour=qna
 
 # For the projections we are going to assume that the selectivities don't change over time
 # So we need a single selectivity pattern for each fleet
-# We take the mean over the years 2006 to 2012 - use what you want
+# We take the mean over the years 2006 to 2012
+# (same as the partial catches)
 pfs_mean <- lapply(pfs, function(x) apply(x[,as.character(2006:2012)] ,c(1,3:6),mean))
 # Giving our selection patterns for the future as
 ggplot(as.data.frame(pfs_mean), aes(x=age, y=data)) + geom_line(aes(colour=qname)) 
@@ -255,9 +286,11 @@ plot(sole_stf)
 plot(lapply(sole_stf, function(x) window(x, start=2004)))
 
 stf_results
-write.csv(stf_results, file="stf_results.csv")
+# write.csv(stf_results, file="stf_results.csv")
 
-# We can split the catches of the results into the catches from each of the fleets
+#---------------------------------------------------------------
+# Now we can split the catches of the results into the catches
+# from each of the fleets.
 
 # We could use the mean partial F proportions or the mean catch proportions (we calculated both of these earlier).
 # They are very close so the choice makes little difference
@@ -267,17 +300,24 @@ prop_data <- rbind(
 )
 ggplot(prop_data, aes(x=age,y=data)) + geom_line(aes(colour=measure)) + facet_wrap(~qname)
 
-# Use the partial catches 
+# Here we use the partial catches 
 # Make FLQuants that go up to 2015 of the partial catch proportions
+# We have already calculated the historical partial catch proportions.
+# The future patial catch proportions we take as the mean of the years 2006
+# to 2012 (we calculated this earlier).
 future_prop_catches <- lapply(prop_catches, function(x) window(x, end=2015))
+# Copy in the future proportions
 future_prop_catches[["set_net"]][,as.character(2013:2015)] <- prop_mean_catches[["set_net"]]
 future_prop_catches[["tram"]][,as.character(2013:2015)] <- prop_mean_catches[["tram"]]
 future_prop_catches[["trawl"]][,as.character(2013:2015)] <- prop_mean_catches[["trawl"]]
+
 # Calculate the future catches for each scenario
+# = total catch * catch proportion of fleet
 future_catch_set_net <- lapply(sole_stf, function(x) apply(catch.n(x) * future_prop_catches[["set_net"]] * catch.wt(x), 2:6, sum))
 future_catch_trawl <- lapply(sole_stf, function(x) apply(catch.n(x) * future_prop_catches[["trawl"]] * catch.wt(x), 2:6, sum))
 future_catch_tram <- lapply(sole_stf, function(x) apply(catch.n(x) * future_prop_catches[["tram"]] * catch.wt(x), 2:6, sum))
 
+# Put it all together for a plot
 future_catches <- rbind(
     cbind(fleet="set_net",as.data.frame(future_catch_set_net)),
     cbind(fleet="trawl",as.data.frame(future_catch_trawl)),
@@ -285,3 +325,4 @@ future_catches <- rbind(
 )
 ggplot(future_catches, aes(x=year, y=data))+ geom_rect(aes(xmin=2013, xmax=2015, ymin=0,ymax=Inf), fill="pink", alpha=0.01) + geom_line(aes(colour=fleet)) + facet_wrap(~qname) + scale_x_continuous(breaks=seq(2000,2015,by=2)) + coord_cartesian(xlim=c(2005,2015)) 
 
+# Now make a big table of results
