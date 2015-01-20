@@ -39,7 +39,7 @@
 
 # Select size and number of years, already in std-indexMedits file, but here also if you want to run alone
 
-size<-seq(min(TC$LENGTH_CLASS), max(TC$LENGTH_CLASS), 5) # size threshold for data aggregation (below/above). If 0 no account for size
+size<-seq(min(TC$LENGTH_CLASS), max(TC$LENGTH_CLASS), 1) # size threshold for data aggregation (below/above). If 0 no account for size
 
 year<-seq(min(TC$YEAR), max(TC$YEAR)) # number of years for which stratified numbers at length should be calculated
   
