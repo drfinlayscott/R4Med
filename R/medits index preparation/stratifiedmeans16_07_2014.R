@@ -146,17 +146,24 @@ stratum<-stratification_scheme[stratification_scheme$AREA %in% gsa,]
 stratified_N_atlength<- as.data.frame(stratified_N_atlength)  
 stratified_N_atlength<-cbind(lengths = dimnames(stratified_N_atlength)[[1]], stratified_N_atlength)
 dimnames(stratified_N_atlength)[[1]]<- 1:(length(size)-1)
-  stratified_N_atlength$lengths<-1:(length(size)-1)
+
+# Create correct vector of lengths to simplify plotting
+lfd <- seq( from = min(size), to = max(size)-5, by = 5)
+stratified_N_atlength$lengths<- lfd
+
 # reshape to long version from wide so that it is easier to plot
 stratified_N_atlengthR <- melt(stratified_N_atlength, id= "lengths", na.rm = TRUE)
-  stratified_N_atlengthR<-droplevels(stratified_N_atlengthR)
-  
-  
-  b <- ggplot(stratified_N_atlengthR, aes(y=value, x=lengths, color=variable))+ geom_bar(stat= "identity")+facet_wrap(~variable)
+stratified_N_atlengthR<-droplevels(stratified_N_atlengthR)
+
+# fix years
+stratified_N_atlengthR$variable <- as.factor(substr(stratified_N_atlengthR$variable, 2,5 ))
+ 
+# PLot out the stratified LFDs by Year 
+b <- ggplot(stratified_N_atlengthR, aes(y=value, x=lengths, color=variable))+ geom_bar(stat= "identity")+facet_wrap(~variable)
 
 # Save plot and save file
-  ggsave(b, file=paste("F:/EWG14_09/stratified_N_atlength", sp , gsa ,".png", sep="") ) 
-  write.csv(stratified_N_atlength, file=paste("F:/EWG14_09/stratified_N_atlength",sp,gsa,".csv", sep=""))
+  ggsave(b, file=paste("stratified_N_atlength", sp , gsa ,".png", sep="") ) 
+  write.csv(stratified_N_atlength, file=paste("stratified_N_atlength",sp,gsa,".csv", sep=""))
   
   
   
