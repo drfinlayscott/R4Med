@@ -105,10 +105,6 @@ plot(sole)
 # We are going to run Short Term Forecast with different F levels.
 # These scenarios will use the same selection pattern for the future years.
 # This selection pattern represents the combined selectivity of the fleets.
-# The selection pattern of each fleet is based on the partial fishing
-# mortality of each fleet. We have estimate this.
-# Here we estimate the partial fishing mortalities by calculating the
-# partial catches of the fleets.
 
 # In this example we use Sole in GSA 17 which has three fleets
 # Set net
@@ -245,14 +241,19 @@ dimnames(fbar_scenarios)[[1]] <- c(as.character(fbar_multiplier),"f0.1")
 # Make an empty matrix in which to store the results
 stf_results <- matrix(NA,nrow = nrow(fbar_scenarios),ncol = 10)
 # Change the column names to reflect years
-colnames(stf_results) <- c('Ffactor','Fbar','Catch_2012','Catch_2013','Catch_2014','Catch_2015','SSB_2014','SSB_2015','Change_SSB_2014-2015(%)','Change_Catch_2012-2014(%)')
+colnames(stf_results) <- c('Ffactor','Fbar',
+						   paste('Catch_', c(stf_years[1]-1,stf_years), sep=""),
+						   paste('SSB_', stf_years[-1], sep=""),
+						   paste('Change_SSB_', stf_years[2], "_", stf_years[3], "(%)", sep=""),
+						   paste('Change_Catch_', stf_years[1]-1, "_", stf_years[2], "(%)", sep=""))
+
 
 # Store the FLStock each time
 sole_stf <- FLStocks()
 # Loop over the scenarios
 for (scenario in 1:nrow(fbar_scenarios)) {
     cat("Scenario: ", scenario, "\n")
-    # Make a target object withe F values for that scenario
+    # Make a target object with F values for that scenario
     ctrl_target <- data.frame(year = stf_years,
                               quantity = "f",
                               val = fbar_scenarios[scenario,])
@@ -269,16 +270,16 @@ for (scenario in 1:nrow(fbar_scenarios)) {
 
     # Fill results table
     stf_results[scenario,1] <- fbar_scenarios[scenario,2] / fbar_scenarios[scenario,1] # fbar status quo ratio
-    stf_results[scenario,2] <- fbar(sole_stf_fwd)[,ac(2015)] # final stf year
-    stf_results[scenario,3] <- catch(sole_stf_fwd)[,ac(2012)] # last 'true' year
-    stf_results[scenario,4] <- catch(sole_stf_fwd)[,ac(2013)] # 1st stf year
-    stf_results[scenario,5] <- catch(sole_stf_fwd)[,ac(2014)] # 2nd stf year
-    stf_results[scenario,6] <- catch(sole_stf_fwd)[,ac(2015)] # final stf year
-    stf_results[scenario,7] <- ssb(sole_stf_fwd)[,ac(2014)] # 2nd stf year
-    stf_results[scenario,8] <- ssb(sole_stf_fwd)[,ac(2015)] # final stf year
+    stf_results[scenario,2] <- fbar(sole_stf_fwd)[,ac(stf_years[3])] # final stf year
+    stf_results[scenario,3] <- catch(sole_stf_fwd)[,ac(stf_years[1]-1)] # last 'true' year
+    stf_results[scenario,4] <- catch(sole_stf_fwd)[,ac(stf_years[1])] # 1st stf year
+    stf_results[scenario,5] <- catch(sole_stf_fwd)[,ac(stf_years[2])] # 2nd stf year
+    stf_results[scenario,6] <- catch(sole_stf_fwd)[,ac(stf_years[3])] # final stf year
+    stf_results[scenario,7] <- ssb(sole_stf_fwd)[,ac(stf_years[2])] # 2nd stf year
+    stf_results[scenario,8] <- ssb(sole_stf_fwd)[,ac(stf_years[3])] # final stf year
     # Change in SSB
-    stf_results[scenario,9] <- (ssb(sole_stf_fwd)[,ac(2015)]-ssb(sole_stf_fwd)[,ac(2014)])/ssb(sole_stf_fwd)[,ac(2014)]*100 # change in ssb in last two stf years
-    stf_results[scenario,10] <- (catch(sole_stf_fwd)[,ac(2014)]-catch(sole_stf_fwd)[,ac(2012)])/catch(sole_stf_fwd)[,ac(2012)]*100 # change in catch from true year, to 2nd to last stf year
+    stf_results[scenario,9] <- (ssb(sole_stf_fwd)[,ac(stf_years[3])]-ssb(sole_stf_fwd)[,ac(stf_years[2])])/ssb(sole_stf_fwd)[,ac(stf_years[2])]*100 # change in ssb in last two stf years
+    stf_results[scenario,10] <- (catch(sole_stf_fwd)[,ac(stf_years[2])]-catch(sole_stf_fwd)[,ac(stf_years[1]-1)])/catch(sole_stf_fwd)[,ac(stf_years[1]-1)]*100 # change in catch from true year, to 2nd to last stf year
 }
 
 # We have a lot of results
@@ -305,11 +306,11 @@ ggplot(prop_data, aes(x=age,y=data)) + geom_line(aes(colour=measure)) + facet_wr
 # We have already calculated the historical partial catch proportions.
 # The future patial catch proportions we take as the mean of the years 2006
 # to 2012 (we calculated this earlier).
-future_prop_catches <- lapply(prop_catches, function(x) window(x, end=2015))
+future_prop_catches <- lapply(prop_catches, function(x) window(x, end=stf_years[3]))
 # Copy in the future proportions
-future_prop_catches[["set_net"]][,as.character(2013:2015)] <- prop_mean_catches[["set_net"]]
-future_prop_catches[["tram"]][,as.character(2013:2015)] <- prop_mean_catches[["tram"]]
-future_prop_catches[["trawl"]][,as.character(2013:2015)] <- prop_mean_catches[["trawl"]]
+future_prop_catches[["set_net"]][,as.character(stf_years)] <- prop_mean_catches[["set_net"]]
+future_prop_catches[["tram"]][,as.character(stf_years)] <- prop_mean_catches[["tram"]]
+future_prop_catches[["trawl"]][,as.character(stf_years)] <- prop_mean_catches[["trawl"]]
 
 # Calculate the future catches for each scenario
 # = total catch * catch proportion of fleet
@@ -323,6 +324,55 @@ future_catches <- rbind(
     cbind(fleet="trawl",as.data.frame(future_catch_trawl)),
     cbind(fleet="tram",as.data.frame(future_catch_tram))
 )
-ggplot(future_catches, aes(x=year, y=data))+ geom_rect(aes(xmin=2013, xmax=2015, ymin=0,ymax=Inf), fill="pink", alpha=0.01) + geom_line(aes(colour=fleet)) + facet_wrap(~qname) + scale_x_continuous(breaks=seq(2000,2015,by=2)) + coord_cartesian(xlim=c(2005,2015)) 
+future_catches$qname <- as.character(future_catches$qname)
+old_names <- future_catches$qname[future_catches$qname != "f0.1"]
+paste("fsq * ", old_names,sep="")
+future_catches$qname[future_catches$qname != "f0.1"] <- paste("fsq * ", old_names,sep="")
 
-# Now make a big table of results
+ggplot(future_catches, aes(x=year, y=data))+ geom_rect(aes(xmin=stf_years[1], xmax=stf_years[3], ymin=0,ymax=Inf), fill="pink", alpha=0.01) + geom_line(aes(colour=fleet)) + facet_wrap(~qname) + scale_x_continuous(breaks=seq(range(sole_stf)['minyear'], range(sole_stf)['maxyear'], by=2)) + coord_cartesian(xlim=c(stf_years[3]-10,stf_years[3])) 
+
+# Now make a big table of results by exporting future_catches
+
+# Get the mean partial Fs for the F0.1 scenario too
+# We need the Fs at age for F0.1 and Fstatus quo
+fbar_range <- range(stf_sole)[c('minfbar')]:range(stf_sole)[c('maxfbar')]
+# fbar of fishing pattern used in forecast
+fbar_fp <- mean(total_pf[ac(fbar_range),])
+# f at age at F01
+f_f01 <- total_pf * f01 / fbar_fp
+# Check - should be same F01
+mean(f_f01[ac(fbar_range),])
+# Same for F status quo
+f_fsq <- total_pf * fbar_status_quo / fbar_fp
+
+# Now split these according the proportional partial Fs we calced earlier
+pf_f01 <- lapply(prop_pf, function(x) x * f_f01)
+pf_fsq <- lapply(prop_pf, function(x) x * f_fsq)
+
+# Now take fbar of these - assume same fbar range for each gear - bit dodgy
+pfbar_f01 <- lapply(pf_f01, function(x) mean(x[ac(fbar_range)]))
+pfbar_fsq <- lapply(pf_fsq, function(x) mean(x[ac(fbar_range)]))
+
+# Table of future catches for F0.1 scenario only
+# And subset out years we ran the forecast for
+out <- subset(future_catches, year %in% stf_years & qname=="f0.1")[,c("fleet", "year", "data")]
+names(out)[names(out) == "data"] <- "catches"
+
+# Add partial Fs to table
+out$partial_f <- NA
+# Fsqs
+out[out$year==stf_years[1] & out$fleet=="set_net","partial_f"] <- pfbar_fsq[["set_net"]]
+out[out$year==stf_years[1] & out$fleet=="trawl","partial_f"] <- pfbar_fsq[["trawl"]]
+out[out$year==stf_years[1] & out$fleet=="tram","partial_f"] <- pfbar_fsq[["tram"]]
+# F01s
+out[out$year %in% stf_years[2:3] & out$fleet=="set_net","partial_f"] <- pfbar_f01[["set_net"]]
+out[out$year %in% stf_years[2:3] & out$fleet=="trawl","partial_f"] <- pfbar_f01[["trawl"]]
+out[out$year %in% stf_years[2:3] & out$fleet=="tram","partial_f"] <- pfbar_f01[["tram"]]
+
+# order by year
+out[order(out$year),]
+
+#catches_f01_tab <- dcast(f01_scen, year ~ fleet)
+
+
+
