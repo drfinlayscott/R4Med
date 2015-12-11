@@ -73,7 +73,7 @@ lfd <- function(TA, TB, TC, medstra, sex, len.unit, tabdir, plotdir, plots=TRUE)
     stratified.N$country<-country.cod
     stratified.N$month<-month.cod
     stratified.N$GSA<-gsa[j]
-    stratified.N$species<-TCn$GENSPE[1]
+    stratified.N$species<-TC$GENSPE[1]
     stratified.N$sex<-sex
     stratified.N<-stratified.N[c("country","GSA","year","species","month","len","value")]
     stratified.N <- stratified.N[order(stratified.N$year,stratified.N$len),] 
@@ -83,11 +83,11 @@ lfd <- function(TA, TB, TC, medstra, sex, len.unit, tabdir, plotdir, plots=TRUE)
     dm<-tmp[rep(row.names(tmp),round(tmp$NBLEN.raised)),]  # duplicate rows
     ## check # numbers should be the same 
     # We avoid to put here an error warning. We just check numbers.
-    print(paste0(round(sum(tmp$NBLEN.raised)), " vs ", dim(dm)[1], "      numbers should (almost) be the same "))
+    cat(paste0(round(sum(tmp$NBLEN.raised)), " vs ", dim(dm)[1], "      numbers should (almost) be the same "), "\n")
 
     # Write data
-    species_file_name <- gsub(" ", "_", TCn$GENSPE[1])
-    write.csv(stratified.N,row.names=F, file= paste0(tabdir,"/stratified_Nlen_",species_file_name,"_",sex,"_GSA",TCn$AREA[1],".csv"))
+    species_file_name <- gsub(" ", "_", TC$GENSPE[1])
+    write.csv(stratified.N,row.names=F, file= paste0(tabdir,"/stratified_Nlen_",species_file_name,"_",sex,"_GSA",TC$AREA[1],".csv"))
 
     # Generate plots
     if (plots == TRUE){
@@ -101,10 +101,10 @@ lfd <- function(TA, TB, TC, medstra, sex, len.unit, tabdir, plotdir, plots=TRUE)
         } 
         # set the graph title
         if  (sex=="all") {
-            tt <- ggtitle(paste0(TCn$GENSPE[1],"    GSA",gsa[j],"\n"))
+            tt <- ggtitle(paste0(TC$GENSPE[1],"    GSA",gsa[j],"\n"))
         }
         else {
-            tt <- ggtitle(paste0(TCn$GENSPE[1]," (",sex,")   GSA",gsa[j],"\n"))
+            tt <- ggtitle(paste0(TC$GENSPE[1]," (",sex,")   GSA",gsa[j],"\n"))
         } 
         # plot the histogram
         p <- p + tt + geom_bar(stat= "identity")+facet_wrap(~year)+
@@ -118,8 +118,8 @@ lfd <- function(TA, TB, TC, medstra, sex, len.unit, tabdir, plotdir, plots=TRUE)
             theme(plot.title = element_text(colour = "red", size=rel(1.2)))+
             theme(axis.text.x = element_text(angle = 45, hjust = 1))
         print(p2)
-        ggsave(p, file=paste0(plotdir,"/stratified_Nlen_",species_file_name,"_",sex,"_GSA",TCn$AREA[1],".png")) 
-        ggsave(p2, file=paste0(plotdir,"/bxplen_",species_file_name,"_",sex,"_GSA",TCn$AREA[1],".png")) 
+        ggsave(p, file=paste0(plotdir,"/stratified_Nlen_",species_file_name,"_",sex,"_GSA",TC$AREA[1],".png")) 
+        ggsave(p2, file=paste0(plotdir,"/bxplen_",species_file_name,"_",sex,"_GSA",TC$AREA[1],".png")) 
     }
 }
 

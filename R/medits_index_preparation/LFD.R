@@ -35,12 +35,14 @@ source("LFD_func.R")
 #---------------------------------------
 # Parameters
 
-datadir <- "./data/"
-tabdir <- "./out_test"
-plotdir <- "./out_test"
-# do you like to split sex?
-sex.by <-"n"  # sex combined
-#sex.by <-"y"  # split by sex 
+# Set these for your computer
+# Location of TA, TB, TC and Medits Strata tables
+datadir <- "../../../db/tables/medits/"
+# Where do you want the results to go
+tabdir <- "../../../medits_test/tables"
+plotdir <- "../../../medits_test/figures"
+# Do you like to split sex?
+sex.split <- FALSE # TRUE  or FALSE
 
 # select area (GSA) and species according to MEDIST standard species coding
 # which species?
@@ -53,15 +55,17 @@ gsa <- c("9","11")
 # Is this not stored somewhere?
 len.unit <- "cm"  # choose between "mm"=millimeters and "cm"=centimeters
 
-# LOAD raw data (MEDITS dataset tables) from csv and subset the GSAs and species we want
-TAn <- fread(paste0(datadir, "medits_ta", ".csv"), sep=",", header=T)
+# Load raw data (MEDITS dataset tables) from csv and subset the GSAs and species we want
+# Check the filenames of the tables and the serator (here ;)
+TAn <- fread(paste0(datadir, "ta", ".csv"), sep=";", header=T)
 TAn <- subset(TAn, area %in% gsa)
-TBn <- fread(paste0(datadir, "medits_tb", ".csv"), sep=",", header=T)
+TBn <- fread(paste0(datadir, "tb", ".csv"), sep=";", header=T)
 TBn <- subset(TBn, (area %in% gsa) & (genus %in% gen) & (species %in% spec))
-TCn <- fread(paste0(datadir, "medits_tc", ".csv"), sep=",", header=T)
+TCn <- fread(paste0(datadir, "tc", ".csv"), sep=";", header=T)
 TCn <- subset(TCn, (area %in% gsa) & (genus %in% gen) & (species %in% spec))
+# You may get warnings - maybe just be character conversions for maturity column
 
-# Convert to data.frames so existing code works (update later)
+# Convert to data.frames so existing code works (update later to work with data.frames)
 TAn <- as.data.frame(TAn)
 TBn <- as.data.frame(TBn)
 TCn <- as.data.frame(TCn)
@@ -193,7 +197,7 @@ for (j in 1:length(gsa)) {
         TC <-subset(TCn, GENSPE==spp[k] & AREA == gsa[j])
         TC <-droplevels(TC)
         cat("Processing species: ", spp[k], "\n")
-        if (sex.by != "y") {
+        if (!sex.split) {
             sex <-"all"
             cat("Processing sex combined: ", sex, "\n")
             #source(paste0(scriptdir,"LFD_fun.R"))
