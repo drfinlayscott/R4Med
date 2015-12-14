@@ -22,10 +22,15 @@ len_data$timing = len_data$month/12
 minage <- 1
 plusGroup <- 10
 
+# We need to adjust the length to be the middle of the bin
+# Here the bin is 5 cm
+head(len_data)
+len_data$min_len <- len_data$len + 2.5
+
 # Slice!
 # Slice by year and timing
 age_data <- ddply(len_data, .(year, timing), function(x) {
-      knife_edge(x[,c("len","value")], vB, timing = x$timing[1], plusGroup=plusGroup, minage=minage)
+      knife_edge(x[,c("min_len","value")], vB, timing = x$timing[1], plusGroup=plusGroup, minage=minage)
 })
 
 head(age_data)
