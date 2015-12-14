@@ -1,3 +1,7 @@
+# DEPRECATED
+# Use slicing_dcf.R instead
+
+
 # length_slicing_landings.R
 # Copyright 2013 Finlay Scott and Chato Osio
 # Maintainer: Finlay Scott, JRC, finlay.scott@jrc.ec.europa.eu
