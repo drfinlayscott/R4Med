@@ -27,3 +27,17 @@ To make your life easier, before each meeting you should:
     * ggplotFL
     * FLBRP
     * FLEDA
+
+## MEDITS indices preparation
+
+Indices can be prepared using the R/medits_index_preparation/LFD.R script.
+This interrogates the TA, TB and TC files (as CSV) and generates CSV files of standardised length-based data.
+The length-based data can then be sliced using the slicing_medits.R script.
+
+## Landings data preparation
+
+See the slicing/slicing_dcf.R script.
+
+## Forecasts
+
+The forecasts folder includes scripts for short term forecast, medium term forecast, a simple multifleet forecast and a simple MSE.
