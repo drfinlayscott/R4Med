@@ -4,7 +4,7 @@
 library(plyr)
 library(ggplot2)
 library(data.table)
-source("../slicing/length_slicing_funcs.r")
+source("../slicing/length_slicing_funcs.R")
 
 gsa <- 9
 species <- "HKE"
@@ -14,14 +14,13 @@ vB <- c(Linf = 130, K = 0.2, t0 = -0.01)
 
 # Read in your length based data
 dat <- fread("~/Work/stecf/sgmed/rome_2015/db/tables/dcf/landings_length.csv", header=TRUE, sep=";")
-
+# Pull out your gsa and species
 dat <- subset(dat, area=gsa, species=species)
 
-# Reshape
-
+# Reshape data.frame into a more helpful shape
 last_col <- min(grep("lengthclass", x=colnames(dat)))-1
-# We melt it into a more helpful shape
 dm <- melt(dat, id.vars=1:last_col, variable.name="len")
+# (ignore warning)
 
 # Coerce value to numeric
 dm$value <- as.numeric(dm$value)
@@ -34,7 +33,7 @@ dm <- dm[dm$value != -1,]
 # Scale the value up by 1000 if necessary (what are your units?)
 dm$value <- dm$value * 1000
 
-# Check your bin widths!
+# Check your bin widths
 # The following will produce a table of length bins by year
 # They are probably by 1 cm
 dcast(ddply(dm, .(year), summarise, lengths = unique(len)), lengths~year)
@@ -87,6 +86,7 @@ caa <- ddply(caa_qy, .(year, age), summarise, data = sum(data))
 
 # Finally turn the results into an FLQuant that can be used
 # to make an FLStock
+library(FLCore)
 caaq <- as.FLQuant(caa[,c("age","year","data")])
 plot(caaq)
 
