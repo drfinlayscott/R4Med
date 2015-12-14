@@ -72,8 +72,8 @@ knife_edge=function(dat,vB,timing=0.5,plusGroup=30,minage=1)
     age <- pmax(pmin(floor(t0-log(1-pmin(len/Linf,.9999999))/K+timing),plusGroup),minage)
     # Calculate frequencies
     res <- aggregate(n, list(age=age), sum)
-    out <- data.frame(age=minage:plusGroup, x=0)
-    out[out$age %in% res$age,"x"] <- res$x
+    out <- data.frame(age=minage:plusGroup, data=0)
+    out[out$age %in% res$age,"data"] <- res$x
     return(out)
 }
 
