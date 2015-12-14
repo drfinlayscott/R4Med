@@ -113,6 +113,42 @@ TAn[which(TAn$DEPTH>100 & TAn$DEPTH<=200),]$CODESTRATA<-"C"
 TAn[which(TAn$DEPTH>200 & TAn$DEPTH<=500),]$CODESTRATA<-"D"
 TAn[which(TAn$DEPTH>500),                 ]$CODESTRATA<-"E"
 
+# Correct Latitude and Longitude for mapping
+#Estimate mid point in Haul and convert to Decimal Degrees for plotting
+lat_start<-as.numeric(as.character(TAn$SHOOTING_LATITUDE))
+lon_start<-as.numeric(as.character(TAn$SHOOTING_LONGITUDE))
+LatStartSec = (lat_start - floor(lat_start))/100;
+LonStartSec = (lon_start - floor(lon_start))/100;
+LatStartDeg = floor(floor(lat_start)/100);
+LonStartDeg = floor(floor(lon_start)/100);
+LatStartMin = (floor(lat_start)/100 - LatStartDeg)/60*100;
+LonStartMin = (floor(lon_start)/100 - LonStartDeg)/60*100;
+lat_end<-as.numeric(as.character(TAn$HAULING_LATITUDE))
+lon_end<-as.numeric(as.character(TAn$HAULING_LONGITUDE))
+LatEndSec = (lat_end - floor(lat_end))/100;
+LonEndSec = (lon_end - floor(lon_end))/100;
+LatEndDeg = floor(floor(lat_end)/100);
+LonEndDeg = floor(floor(lon_end)/100);
+LatEndMin = (floor(lat_end)/100 - LatEndDeg)/60*100;
+LonEndMin = (floor(lon_end)/100 - LonEndDeg)/60*100;
+lat_start2 = LatStartDeg + LatStartMin + LatStartSec;
+lon_start2 = LonStartDeg + LonStartMin + LonStartSec;
+lat_end2 = LatEndDeg + LatEndMin + LatEndSec;
+lon_end2 = LonEndDeg + LonEndMin + LonEndSec;
+lat_start = lat_start2;
+lon_start = lon_start2;
+# use the quadrant to identify negative longitudes
+lon_start<-ifelse(TAn$SHOOTING_QUADRANT==7, lon_start*-1, lon_start)
+lat_end = lat_end2;
+lon_end = lon_end2;
+# use the quadrant to identify negative longitudes
+lon_end<-ifelse(TAn$HAULING_QUADRANT==7, lon_end*-1, lon_end)
+#FIXED MID HAUL POSITION
+lat = (lat_start+lat_end)/2 
+lon = (lon_start+lon_end)/2 
+TAn$Latitude<-lat
+TAn$Longitude<-lon
+
 #------------------------------------------------------
 # Merging tables
 
@@ -217,65 +253,5 @@ for (j in 1:length(gsa)) {
     }
 } 
 
-# Remove some not needed staff  ####
-#rm(lat,lat_end,lat_end2,LatEndDeg,LatEndMin,LatEndSec,
-#   lat_start,lat_start2,LatStartDeg,LatStartMin,LatStartSec,
-#   lon,lon_end,lon_end2,LonEndDeg,LonEndMin,LonEndSec,
-#   lon_start,lon_start2,LonStartDeg,LonStartMin,LonStartSec)
-#rm(clmn.TA,clmn.TB,clmn.TC,i,j,k,m,year,tbl,tmp,dbtype,database,
-#   stra.fac,stra.sur,stra.sur.t,stratified.N,swept.y)
-#rm(lfd.std,lfd.std.t,lfd.y,lfd.y2)
-#rm(TA,TB,TC,TB1,TC1)
 
-# rm(len.unit,codspe,EWG,gsa,hm.gsa,hm.sp,p,sex.by,species,spp,nspp)
-# rm(cat04,catches,lan09,land,tor5,tor5.ls,effort,disc,medstra,nstra11)
-# rm(TA.m,TAn,TBn,TCn)
-
-
-# Lat and Lon stuff
-
-#Estimate mid point in Haul and convert to Decimal Degrees for plotting
-#lat_start<-as.numeric(as.character(TAn$SHOOTING_LATITUDE))
-#lon_start<-as.numeric(as.character(TAn$SHOOTING_LONGITUDE))
-## lat_start<-TAn$SHOOTING_LATITUDE
-## lon_start<-TAn$SHOOTING_LONGITUDE
-#LatStartSec = (lat_start - floor(lat_start))/100;
-#LonStartSec = (lon_start - floor(lon_start))/100;
-#LatStartDeg = floor(floor(lat_start)/100);
-#LonStartDeg = floor(floor(lon_start)/100);
-#LatStartMin = (floor(lat_start)/100 - LatStartDeg)/60*100;
-#LonStartMin = (floor(lon_start)/100 - LonStartDeg)/60*100;
-#
-#lat_end<-as.numeric(as.character(TAn$HAULING_LATITUDE))
-#lon_end<-as.numeric(as.character(TAn$HAULING_LONGITUDE))
-## lat_end<-TAn$HAULING_LATITUDE
-## lon_end<-TAn$HAULING_LONGITUDE
-#LatEndSec = (lat_end - floor(lat_end))/100;
-#LonEndSec = (lon_end - floor(lon_end))/100;
-#LatEndDeg = floor(floor(lat_end)/100);
-#LonEndDeg = floor(floor(lon_end)/100);
-#LatEndMin = (floor(lat_end)/100 - LatEndDeg)/60*100;
-#LonEndMin = (floor(lon_end)/100 - LonEndDeg)/60*100;
-#
-#lat_start2 = LatStartDeg + LatStartMin + LatStartSec;
-#lon_start2 = LonStartDeg + LonStartMin + LonStartSec;
-#
-#lat_end2 = LatEndDeg + LatEndMin + LatEndSec;
-#lon_end2 = LonEndDeg + LonEndMin + LonEndSec;
-#
-#lat_start = lat_start2;
-#lon_start = lon_start2;
-## use the quadrant to identify negative longitudes
-#lon_start<-ifelse(TAn$SHOOTING_QUADRANT==7, lon_start*-1, lon_start)
-#lat_end = lat_end2;
-#lon_end = lon_end2;
-## use the quadrant to identify negative longitudes
-#lon_end<-ifelse(TAn$HAULING_QUADRANT==7, lon_end*-1, lon_end)
-#
-##FIXED MID HAUL POSITION
-#lat = (lat_start+lat_end)/2 
-#lon = (lon_start+lon_end)/2 
-#
-#TAn$Latitude<-lat
-#TAn$Longitude<-lon
 
