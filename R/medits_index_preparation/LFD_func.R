@@ -28,10 +28,9 @@
 ###==================================================================================###
 
 
-# TA, TB, TC are generated from parent script and contain data on 1 GSA and 1 species only
 lfd <- function(TA, TB, TC, medstra, sex, len.unit, tabdir, plotdir, plots=TRUE){
 
-    year<-unique(TC$YEAR) # number of years for which stratified numbers at length should be calculated
+    year<-sort(unique(TC$YEAR)) # number of years for which stratified numbers at length should be calculated
     # Sum TC$NBLEN.raised by CODESTRATA, LENGTH_CLASS and YEAR
     lfd.y<-tapply(TC$NBLEN.raised,list(TC$CODESTRATA,TC$LENGTH_CLASS,TC$YEAR),sum) # LFD raised array
     # Sum TA$swept by Year and codeStrata - what is swept?
@@ -52,7 +51,7 @@ lfd <- function(TA, TB, TC, medstra, sex, len.unit, tabdir, plotdir, plots=TRUE)
     for (i in 1:length(year)) {
         mth<-(match(rownames(lfd.y[,,i]),rownames(swept.y)))
         # total numbers / swept area
-        lfd.y2[1:dim(lfd.y)[1],,i]<-lfd.y[1:dim(lfd.y)[1],,i]/swept.y[mth,i] # standardized LFD array
+        lfd.y2[1:dim(lfd.y)[1],,i]<-lfd.y[1:dim(lfd.y)[1],,i]/swept.y[mth,as.character(year[[i]])] # standardized LFD array
     }
 
     # reshape and store calculation ####
@@ -70,12 +69,13 @@ lfd <- function(TA, TB, TC, medstra, sex, len.unit, tabdir, plotdir, plots=TRUE)
 
     # add some extra information #####
     names(stratified.N)<-c("year","len","value")
-    stratified.N$country<-country.cod
+    #stratified.N$country<-country.cod
     stratified.N$month<-month.cod
     stratified.N$GSA<-gsa[j]
     stratified.N$species<-TC$GENSPE[1]
     stratified.N$sex<-sex
-    stratified.N<-stratified.N[c("country","GSA","year","species","month","len","value")]
+    #stratified.N<-stratified.N[c("country","GSA","year","species","month","len","value")]
+    stratified.N<-stratified.N[c("GSA","year","species","month","len","value")]
     stratified.N <- stratified.N[order(stratified.N$year,stratified.N$len),] 
 
     # duplicate row for NBLEN>1
@@ -123,6 +123,3 @@ lfd <- function(TA, TB, TC, medstra, sex, len.unit, tabdir, plotdir, plots=TRUE)
     }
 }
 
-# remove # below if you need TB and TC table by GSA
-#   write.csv(TB, file=paste0(EWG,codspe[k],"-GSA",gsa[j] ,"_TB",".csv"))
-#   write.csv(TC, file=paste0(EWG,codspe[k],"_",m,"-GSA",gsa[j], "_TC",".csv"))

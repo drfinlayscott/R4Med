@@ -37,7 +37,7 @@ source("LFD_func.R")
 
 # Set these for your computer
 # Location of TA, TB, TC and Medits Strata tables
-datadir <- "../../../db/tables/medits/"
+datadir <- "../../../tables/medits/"
 # Where do you want the results to go
 tabdir <- "../../../medits_test/tables"
 plotdir <- "../../../medits_test/figures"
@@ -46,13 +46,19 @@ sex.split <- FALSE # TRUE  or FALSE
 
 # select area (GSA) and species according to MEDIST standard species coding
 # which species?
-spp <-c("MERL MER","MULL BAR") 
+#spp <-c("MERL MER","MULL BAR") 
+#spp <-c("MULL BAR") 
+#spp <-c("NEPR NOR") 
+#spp <-c("SQUI MAN") 
+spp <-c("PAPE LON") 
 gen <- unlist(lapply(strsplit(spp, " "), function(x) x[1]))
 spec <- unlist(lapply(strsplit(spp, " "), function(x) x[2]))
 # which GSAs?
-gsa <- c("9","11") 
+#gsa <- c("9","11") 
+gsa <- 17
 # which length unit? 
 # Is this not stored somewhere?
+#len.unit <- "mm"  # choose between "mm"=millimeters and "cm"=centimeters
 len.unit <- "cm"  # choose between "mm"=millimeters and "cm"=centimeters
 
 # Load raw data (MEDITS dataset tables) from csv and subset the GSAs and species we want
@@ -236,7 +242,6 @@ for (j in 1:length(gsa)) {
         if (!sex.split) {
             sex <-"all"
             cat("Processing sex combined: ", sex, "\n")
-            #source(paste0(scriptdir,"LFD_fun.R"))
             lfd(TA, TB, TC, medstra, sex, len.unit, tabdir, plotdir, plots=TRUE)
         }
         else {
@@ -245,13 +250,16 @@ for (j in 1:length(gsa)) {
                 TC.sx<-TC
                 TC<-TC.sx[as.character(TC.sx$SEX)==sex,]
                 cat("Processing sex: ", sex, "\n")
-                #source(paste0(scriptdir,"LFD_fun.R"))
                 lfd(TA, TB, TC, medstra, sex, len.unit, tabdir, plotdir, plots=TRUE)
                 TC<-TC.sx
             }
         }
     }
 } 
+
+
+sq <- subset(TC, YEAR==2011)
+
 
 
 
