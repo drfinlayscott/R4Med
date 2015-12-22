@@ -42,7 +42,7 @@ datadir <- "../../../tables/medits/"
 # Where do you want the results to go
 #tabdir <- "../../../../medits_test/tables"
 #plotdir <- "../../../../medits_test/figures"
-# Do you like to split sex?
+# Do you want to split sex?
 sex.split <- FALSE # TRUE  or FALSE
 
 # select area (GSA) and species according to MEDIST standard species coding
