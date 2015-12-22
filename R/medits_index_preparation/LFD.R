@@ -183,7 +183,6 @@ clmn.TB<- c("ID_MEDITS_TB","COUNTRY","AREA","VESSEL","YEAR","HAUL_NUMBER","PTOT"
 clmn.TC<- c("COUNTRY","AREA","VESSEL","YEAR","HAUL_NUMBER","CODLON","PFRAC","PECHAN","SEX","NBSEX",
             "LENGTH_CLASS","MATURITY","NBLON","GENSPE","MATSUB","CATFAU")
 
-
 # Why are we merging here? 
 # merge tables - is this right way round - lose some rows here
 # If using data.table need to set keys
@@ -256,10 +255,5 @@ for (j in 1:length(gsa)) {
         }
     }
 } 
-
-
-sq <- subset(TC, YEAR==2011)
-
-
 
 

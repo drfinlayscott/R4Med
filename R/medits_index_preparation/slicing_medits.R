@@ -33,13 +33,15 @@ tabdir <- "../../../medits_test/tables/"
 
 # Read in your length based data from the LFD.R script
 # Example using MER MER in GSA 9
-len_data <- read.csv(paste0(tabdir,"stratified_Nlen_MERL_MER_all_GSA9.csv"), header=TRUE)
+len_data <- read.csv(paste0(tabdir,"stratified_Nlen_NEPR_NOR_all_GSA17.csv"), header=TRUE)
 
 # Take a look, is this your data?
 head(len_data)
 
 # Set the VB parameters in this format
-vB <- c(Linf = 130, K = 0.2, t0 = -0.01)
+#vB <- c(Linf = 130, K = 0.2, t0 = -0.01)
+#vB <- c(Linf = 30, K = 0.4, t0 = -0.03)
+vB <- c(Linf = , K = , t0 = -0.)
 
 # The knife-edge slicing gives you the age at beginning of the year.
 # It is therefore important to consider when the MEDITS data was collected.
@@ -48,12 +50,14 @@ vB <- c(Linf = 130, K = 0.2, t0 = -0.01)
 len_data$timing = len_data$month/12
 
 # Set the minimum age and plusgroup
-minage <- 1
-plusGroup <- 10
+minage <- 0
+plusGroup <- 4 
 
 # We need to adjust the length to be the middle of the bin
 # Here the bin is 5 cm so we add 2.5 cm to the lengths
-len_data$min_len <- len_data$len + 2.5
+len_data$len <- len_data$len / 10
+#len_data$min_len <- len_data$len + 2.5
+len_data$min_len <- len_data$len + 0.25
 
 # Slice by year and timing
 age_data <- ddply(len_data, .(year, timing), function(x) {

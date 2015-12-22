@@ -81,18 +81,18 @@ idxs <- readFLIndices("../../data/sole_gsa17/TUNEFF.DAT")
 load("../../data/sole_gsa17/stk.Rdata") 
 
 # Here we use FLa4a to rerun the assessment
-fmodel <- ~te(age, year, k = c(4, 10)) + s(year, k = 5, by = as.numeric(as.numeric(age == 1)))
-qmodel <- list(~s(age, k=3))
-rmodel <- ~factor(year)
-fit <- a4aSCA(stock=sole,
-        indices = idxs,
-        fmodel = fmodel,
-        qmodel = qmodel,
-        srmodel = rmodel)
-sole <- sole + fit
-
-# Check out the results
-plot(sole)
+#fmodel <- ~te(age, year, k = c(4, 10)) + s(year, k = 5, by = as.numeric(as.numeric(age == 1)))
+#qmodel <- list(~s(age, k=3))
+#rmodel <- ~factor(year)
+#fit <- a4aSCA(stock=sole,
+#        indices = idxs,
+#        fmodel = fmodel,
+#        qmodel = qmodel,
+#        srmodel = rmodel)
+#sole <- sole + fit
+#
+## Check out the results
+#plot(sole)
 
 # This is the starting point of the example.
 
@@ -301,6 +301,7 @@ prop_data <- rbind(
 )
 ggplot(prop_data, aes(x=age,y=data)) + geom_line(aes(colour=measure)) + facet_wrap(~qname)
 
+names(sole_stf) <- dimnames(fbar_scenarios)[[1]]
 # Here we use the partial catches 
 # Make FLQuants that go up to 2015 of the partial catch proportions
 # We have already calculated the historical partial catch proportions.
@@ -353,7 +354,9 @@ pf_fsq <- lapply(prop_pf, function(x) x * f_fsq)
 pfbar_f01 <- lapply(pf_f01, function(x) mean(x[ac(fbar_range)]))
 pfbar_fsq <- lapply(pf_fsq, function(x) mean(x[ac(fbar_range)]))
 
-# Table of future catches for F0.1 scenario only
+# Table of future catches for F0.1  and Fsq scenarios
+
+# Start with F0.1
 # And subset out years we ran the forecast for
 out <- subset(future_catches, year %in% stf_years & qname=="f0.1")[,c("fleet", "year", "data")]
 names(out)[names(out) == "data"] <- "catches"
@@ -369,8 +372,23 @@ out[out$year %in% stf_years[2:3] & out$fleet=="set_net","partial_f"] <- pfbar_f0
 out[out$year %in% stf_years[2:3] & out$fleet=="trawl","partial_f"] <- pfbar_f01[["trawl"]]
 out[out$year %in% stf_years[2:3] & out$fleet=="tram","partial_f"] <- pfbar_f01[["tram"]]
 
+# Make the other table of Fsq
+out2 <- subset(future_catches, year %in% stf_years & qname=="fsq * 1")[,c("fleet", "year", "data")]
+names(out2)[names(out2) == "data"] <- "catches"
+
+# Add partial Fs to table
+out2$partial_f <- NA
+# Fsqs
+out2[out2$year==stf_years & out2$fleet=="set_net","partial_f"] <- pfbar_fsq[["set_net"]]
+out2[out2$year==stf_years & out2$fleet=="trawl","partial_f"] <- pfbar_fsq[["trawl"]]
+out2[out2$year==stf_years & out2$fleet=="tram","partial_f"] <- pfbar_fsq[["tram"]]
+
+out3 <- rbind(cbind(scenario="F0.1", out),
+      cbind(scenario="Fsq", out2))
+
 # order by year
-out[order(out$year),]
+out3[order(out3$scenario, out3$fleet, out3$year),]
+
 
 #catches_f01_tab <- dcast(f01_scen, year ~ fleet)
 
