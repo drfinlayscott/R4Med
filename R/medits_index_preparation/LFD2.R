@@ -1,14 +1,10 @@
 ###========================================================================================####
-#    Title:   LFD_4_EWG.R
+#    Title:   LFDplyr.R
 #    Release: 0.1
-#                            ______><((((?>______
-# 
-#    Description: FUNCTION THAT PRODUCES STANDARDIZED LFD FROM MEDITS DATA
+#                          
+#    Description: Script that produces standardised length-frequency distribution from Medits data.
 #    Authors:  Matteo MURENU, Alessandro MANNINI, Tristan ROUYER, Chato OSIO, Finlay SCOTT
-#    Date: created on June 2015, ISPRA, EWG 15-06 meeting
-#    Updates:
-#      on August 2015 during EWG 15-11  by Matteo Murenu
-#      on December 2015 by Finlay Scott
+#    Date: Created December 2015, ROMA, EWG 15-06 meeting
 #
 ###========================================================================================####
 #
@@ -27,76 +23,61 @@
 #
 ###==================================================================================###
 
-library(reshape2)
+# Libraries and what not
+
+#library(reshape2)
 library(ggplot2)
 library(data.table)
-library(dplyr)
-library(plyr)
+library(dplyr) # Not really being used - could be for speed
+library(plyr) # Needed for join
 
 #---------------------------------------
-# Parameters
+# Parameters - could be inputs for function
 
 # Set these for your computer
 # Location of TA, TB, TC and Medits Strata tables
 datadir <- "../../../tables/medits/"
-# Where do you want the results to go
-#tabdir <- "../../../../medits_test/tables"
-#plotdir <- "../../../../medits_test/figures"
-# Do you want to split sex?
-sex.split <- FALSE # TRUE  or FALSE
 
-# select area (GSA) and species according to MEDIST standard species coding
-# which species?
-#spp <-c("MERL MER","MULL BAR") 
-#spp <-c("MERL MER")
-#spp <-c("NEPR NOR")
-spp <-c("PAPE LON")
-gen <- unlist(lapply(strsplit(spp, " "), function(x) x[1]))
-spec <- unlist(lapply(strsplit(spp, " "), function(x) x[2]))
-# which GSAs?
-#gsa <- c("9","11") 
-#gsa <- 9
-gsa <- 17 
-# which length unit? 
-# Is this not stored somewhere?
-len.unit <- "cm"  # choose between "mm"=millimeters and "cm"=centimeters
+# Where do you want the results to go
+outdir <- "../../../medits_lfd_test/data"
+plotdir <- "../../../medits_lfd_test/figures"
+
+# Have these in a data frame?
+# Might be easier
+
+#wanted <- data.frame(genus = c("MERL", "MERL", "MULL", "PAPE"),
+#                     species = c("MER", "MER", "BAR", "LON"),
+#                     gsa = c(9, 11, 9, 17),
+#                     sex_split = FALSE,
+#                     len_unit = c(rep("cm",3), "mm"))
+
+
+wanted <- data.frame(genus = c("MERL", "MERL", "MULL"),
+                     species = c("MER", "MER", "BAR"),
+                     gsa = c(9, 11, 9),
+                     sex_split = c(FALSE, TRUE,FALSE),
+                     len_unit = c(rep("cm",3)))
+
+
+plots <- TRUE
 
 #---------------------------------------------------
-# Data loading and preparation
+# Data loading and editing
 
 # Load raw data (MEDITS dataset tables) from csv and subset the GSAs and species we want
 # Check the filenames of the tables and the serator (here ;)
 TAn <- fread(paste0(datadir, "ta", ".csv"), sep=";", header=T)
-TAn <- subset(TAn, area %in% gsa)
+TAn <- subset(TAn, area %in% unique(wanted$gsa))
 TCn <- fread(paste0(datadir, "tc", ".csv"), sep=";", header=T)
-TCn <- subset(TCn, (area %in% gsa) & (genus %in% gen) & (species %in% spec))
-# You may get warnings - may just be character conversions for maturity column
+# Insufficient subsetting as it may include unwanted rows - but enough to trim TCn down a bit
+TCn <- subset(TCn, area %in% unique(wanted$gsa) & genus %in% unique(wanted$genus) & species %in% unique(wanted$species))
 
 # For consistency
 names(TAn)<-toupper(names(TAn))
 names(TCn)<-toupper(names(TCn))
 
-# Just pull out one year
-# 2008 has lots of NAs
-#TAn <- subset(TAn, YEAR==2005) 
-#TCn <- subset(TCn, YEAR==2005) 
-
-# Convert to data.frames until I understand data.tables properly
-#TAn <- as.data.frame(TAn)
-#TBn <- as.data.frame(TBn)
-#TCn <- as.data.frame(TCn)
-
-## Fix problem in TCn length class for NERP NOR
-#cn <- names(TCn)
-##TCntemp <- TCn
-#TCn$LENGTH_CLASS <- round(TCn$LENGTH_CLASS)
-## Sum indivs in same length class
-## (no need)
-##(subset(TCn, YEAR==2004))
-#TCn <- ddply(TCn, .(ID_MEDITS_TC, COUNTRY, AREA, VESSEL, YEAR, HAUL_NUMBER, CODEND_CLOSING, PARTIT, GENUS, SPECIES, CODLON, PFRAC,PECHAN,SEX,NBSEX,LENGTH_CLASS, MATURITY, UPLOAD_DATE, USER_ID, MATSUB, TF,  MONTH, DAY, CATFAU,MD5,CORRECT), summarise, NBLON = sum(NBLON))
-
-#sort(unique(subset(TAn, YEAR == 1995 & COUNTRY=="ITA")$HAUL_NUMBER))
-#sort(unique(subset(TCn, YEAR == 1995 & COUNTRY=="ITA")$HAUL_NUMBER))
+# Remove invalid hauls from TA 
+TAn<-subset(TAn, VALIDITY=="V")
 
 # rename column names
 colnames(TCn)[colnames(TCn)=="NBLON"] <- "NBLEN"
@@ -112,20 +93,16 @@ TCn$NBSEX<-as.numeric(as.character(TCn$NBSEX))
 TCn$WEIGHT_OF_THE_FRACTION<-as.numeric(as.character(TCn$WEIGHT_OF_THE_FRACTION))
 TCn$WEIGHT_OF_THE_SAMPLE_MEASURED<-as.numeric(as.character(TCn$WEIGHT_OF_THE_SAMPLE_MEASURED))
 TCn$LENGTH_CLASS<-as.numeric(as.character(TCn$LENGTH_CLASS))
-#TBn$NBTOT<-as.numeric(as.character(TBn$NBTOT))
-#TBn$PTOT<-as.numeric(as.character(TBn$PTOT))
+# Join GENUS and SPECIES columns
+TCn$SP <- paste(TCn$GENUS, TCn$SPECIES)
 
-# Remove invalid hauls from TA 
-TAn<-subset(TAn, VALIDITY=="V")
 
+# Do these go here - can flag up which species if put in loop below
 # Checks
-# Check if there are duplicated rows in the files, if there are, running unique will remove duplicates, was a TEMP FIX FOR MERL in AREA 7
+# Check if there are duplicated rows in the files
 if (dim(unique(TAn))[1] != dim(TAn)[1]){
     stop("TA table contains duplicates\n")
 }
-#if (dim(unique(TBn))[1] != dim(TBn)[1]){
-#    stop("TB table contains duplicates\n")
-#}
 if (dim(unique(TCn))[1] != dim(TCn)[1]){
     stop("TC table contains duplicates\n")
 }
@@ -134,30 +111,137 @@ if (!all(TAn$WING_OPENING > 0)){
     stop("WING_OPENING less than 0 in TA table\n")
 }
 
-# Are all hauls in TCn in TAn - if not join will not work properly
-
-haul_check_fail <- rep(FALSE, length(unique(TCn$YEAR)))
-names(haul_check_fail) <- unique(TCn$YEAR)
-for (i in unique(TCn$YEAR)){
-    if(!all(unique(subset(TCn, YEAR==i)$HAUL_NUMBER) %in% unique(subset(TAn, YEAR==i)$HAUL_NUMBER))){
-        haul_check_fail[as.character(i)] <- TRUE
-    }
-}
-if(any(haul_check_fail)){
-    stop("Not all hauls in TC are in TA\n")
-}
-
 # Load MEDITS strata dataframe
 medstrata<-fread(paste0(datadir,"MEDITS_Strata.csv"), sep=",", header=T)
 names(medstrata)[3:5]<-c("NSTRATE", "CODEZONE","DEPTHSTRATA")
-# Check NUMBER_OF_STRATA in TA has values in medstra only - else merge will fail
+
+#-------------------------------------------------------------
+# The MEDITS methodology
+# See page 56 of MEDITS manual 2012
+
+# Pull MEDITS strata into TA 
+# Joins by NSTRATE (which is unique in TAn)
+# Check before join that all of the NSTRATE values in TA also exist in medstra - else merge will fail
 if(!all(TAn$NSTRATE %in% medstrata$NSTRATE)){
     stop("Not all strata numbers in TA are in the MEDITS strata table (some missing values or -1?).\n")
 }
+TAn <- join(TAn, medstrata[,c("NSTRATE", "AREASTRATA", "CODESTRATA"), with=FALSE], by="NSTRATE")
+# Now TAn has CODESTRATA and AREASTRATA
+
+# Calc SWEPT AREA of each haul in TAn and adjust units of measure to km 
+# Wing opening is measured in decimeteres and distance in meters, then:
+TAn$DISTANCE<-as.numeric(as.character(TAn$DISTANCE))
+TAn$WING_OPENING<-as.numeric(as.character(TAn$WING_OPENING))
+TAn$SWEPT<-(TAn$DISTANCE *((TAn$WING_OPENING)/10000))/1000 #Swept area in Km^2
+# Get total swept area of hauls in each stratum: Ak
+total_swept <- ddply(TAn, .(YEAR, AREA, CODESTRATA), summarise, TOTAL_AREA_SWEPT=sum(SWEPT))
+
+# Raise the measured sample to the whole catch in the haul
+TCn$NBLEN.sample.raised <- TCn$NBLEN*TCn$WEIGHT_OF_THE_FRACTION/TCn$WEIGHT_OF_THE_SAMPLE_MEASURED
+
+# Get weight of each strata in each area: Wk
+# Each GSA is split into five depth strata and several zones
+# Need to combine areas across zones, keeping strata separate
+# Total area of each strata, summing across zones
+strata_weight <- ddply(medstrata, .(AREA, CODESTRATA), summarise, TOTAL_STRATA_AREA = sum(AREASTRATA))
+# Finally get weight of each strata in each area: Wk
+strata_weight <- ddply(strata_weight, .(AREA), transform, STRATA_WEIGHT = TOTAL_STRATA_AREA / sum(TOTAL_STRATA_AREA))
+
+# Now process wanted row by row
+for (wanted_count in 1:nrow(wanted)){
+    cat("Processing", as.character(wanted$genus[wanted_count]), as.character(wanted$species[wanted_count]), "in gsa" , wanted$gsa[wanted_count],"\n")
+    TCsub <- subset(TCn, AREA==wanted$gsa[wanted_count] & SPECIES==wanted$species[wanted_count] & GENUS==wanted$genus[wanted_count])
+    # Adjust lengths based on unit
+    if(wanted$len_unit[wanted_count]=="cm"){
+        TCsub$length <- ifelse(TCsub$LENGTH_CLASSES_CODE=="M", TCsub$LENGTH_CLASS/10, TCsub$LENGTH_CLASS)
+    } else {
+        TCsub$length <- ifelse(TCsub$LENGTH_CLASSES_CODE!="M", TCsub$LENGTH_CLASS*10, TCsub$LENGTH_CLASS)
+    }
+    # Check all hauls in TCsub are in TAn - else join will fail
+    for (yr in unique(TCsub$YEAR)){
+        if (!all(unique(subset(TCsub, YEAR==yr)$HAUL_NUMBER) %in% unique(subset(TAn, AREA==wanted$gsa[wanted_count] & YEAR==yr)$HAUL_NUMBER))){
+            warning(paste("Not all hauls in TC are in TA for", as.character(wanted$genus[wanted_count]), as.character(wanted$species[wanted_count]), "in gsa" , wanted$gsa[wanted_count], "in year", yr, "\n"))
+        }
+    }
+    # Want to sum N across hauls for each strata and length
+    # Join TC with TA to bring CODESTRATA into TC
+    # Joins by COUNTRY, AREA, YEAR, HAUL_NUMBER
+    TCsub <- join(TCsub, TAn[,c("YEAR", "COUNTRY", "AREA", "HAUL_NUMBER", "CODESTRATA"), with=FALSE])
+    # TCn now has CODESTRATA
+    # Calculate the mean N per area (by length and stratum)
+    # First get the total numbers in each stratum by length
+    mean_n <- ddply(TCsub, .(YEAR, AREA, CODESTRATA, GENUS, SPECIES, SEX, LENGTH_CLASS), summarise, TOTAL_N = sum(NBLEN.sample.raised))
+    # Bring in the total swept area in each stratum - joins by YEAR, AREA and CODESTRATA
+    mean_n <- join(mean_n, total_swept)
+    # Calc mean N over the area
+    mean_n$MEAN_N <- mean_n$TOTAL_N / mean_n$TOTAL_AREA_SWEPT
+    # Multiply the mean n by the weight of the strata
+    mean_n <- join(mean_n, strata_weight)
+    mean_n$WEIGHTED_MEAN_N <- mean_n$MEAN_N * mean_n$STRATA_WEIGHT
+    # Sum to create the index
+    if (wanted$sex_split[wanted_count]==TRUE){
+        species_file_name <- paste(wanted$genus[wanted_count], wanted$species[wanted_count],wanted$gsa[wanted_count], "SEX",sep="_")
+        index <- ddply(mean_n, .(AREA, YEAR, GENUS, SPECIES, SEX, LENGTH_CLASS), summarise, data = sum(WEIGHTED_MEAN_N))
+    }
+    else {
+        species_file_name <- paste(wanted$genus[wanted_count], wanted$species[wanted_count],wanted$gsa[wanted_count], sep="_")
+        index <- ddply(mean_n, .(AREA, YEAR, GENUS, SPECIES, LENGTH_CLASS), summarise, data = sum(WEIGHTED_MEAN_N))
+    }
+    
+    # Save output
+    save(index,file=paste0(outdir,"/stratified_Nlen_",species_file_name,".Rdata"))
+
+    
+    # Generate plots
+    if (plots == TRUE){
+        if  (wanted$len_unit[wanted_count]=="cm") {
+            p <- ggplot(index, aes(y=data, x=LENGTH_CLASS/10))
+            p2 <- ggplot(index, aes(y=LENGTH_CLASS/10, x=factor(YEAR)))
+        }
+        else {
+            p <- ggplot(index, aes(y=data, x=LENGTH_CLASS))
+            p2 <- ggplot(index, aes(y=LENGTH_CLASS, x=factor(YEAR)))
+        } 
+        # set the graph title
+        if  (wanted$sex_split[wanted_count]==FALSE) {
+            tt <- ggtitle(paste0(wanted$genus[wanted_count], " ", wanted$species[wanted_count],": GSA",wanted$gsa[wanted_count],"\n"))
+        }
+        else {
+            tt <- ggtitle(paste0(wanted$genus[wanted_count], " ", wanted$species[wanted_count], ", sex"," : GSA",wanted$gsa[wanted_count],"\n"))
+        } 
+        # plot the histogram
+        p <- p + tt + geom_bar(stat= "identity") +
+            labs(x=paste0("\nLength (",wanted$len_unit[wanted_count],")"),y=expression("n/km"^"2")) +
+            theme(legend.position="none")
+        if  (wanted$sex_split[wanted_count]==FALSE) {
+            p <- p + facet_wrap(~YEAR)
+        }
+        else{
+            p <- p + facet_grid(YEAR~SEX)
+        }
+        print(p)
+        ggsave(p, file=paste0(plotdir,"/stratified_Nlen_",species_file_name,".png"))
+        
+        # plot the boxplot
+        p2 <- p2 + tt + geom_boxplot() +
+            labs(y=paste0("\nLength (", wanted$len_unit[wanted_count],")\n"),x=NULL) +
+            guides(fill=FALSE) + theme_bw() +
+            theme(plot.title = element_text(colour = "red", size=rel(1.2))) +
+            theme(axis.text.x = element_text(angle = 45, hjust = 1))
+        if  (wanted$sex_split[wanted_count]==TRUE) {
+            p2 <- p2 + facet_wrap(~SEX)
+        }
+        print(p2)
+        ggsave(p2, file=paste0(plotdir,"/bxplen_",species_file_name,".png")) 
+    }
+}
 
 #--------------------------------------------------------------
+
+
+# Include?
 # Correct Latitude and Longitude for mapping
-#Estimate mid point in Haul and convert to Decimal Degrees for plotting
+# Estimate mid point in Haul and convert to Decimal Degrees for plotting
 lat_start<-as.numeric(as.character(TAn$SHOOTING_LATITUDE))
 lon_start<-as.numeric(as.character(TAn$SHOOTING_LONGITUDE))
 LatStartSec = (lat_start - floor(lat_start))/100;
@@ -194,122 +278,16 @@ TAn$Longitude<-lon
 
 #----------------------------------------------------
 
-# Add sanity check for DEPTH
-
-# spp <-c("PAPE LON") in area 17
-# 2005
-# TAn has CODESTRATA E (no NSTRATE 21110)
-# Wrong coding of STRATA or no hauls that year?
-
-
-# Need to set CODESTATA to match with medstrata
-# Assign the depth strata code (CODESTRATA) using mean depth values (DEPTH)
-# i.e "1-50m","51-100m","101-200m","201-500m","501-800m"
-#TAn$HAULING_DEPTH<-as.numeric(as.character(TAn$HAULING_DEPTH))
-#TAn$SHOOTING_DEPTH<-as.numeric(as.character(TAn$SHOOTING_DEPTH))
-#TAn$DEPTH<-(TAn$HAULING_DEPTH+TAn$SHOOTING_DEPTH)/2
-#TAn$CODESTRATA<-'-'
-#TAn[which(TAn$DEPTH>0   & TAn$DEPTH<=50), ]$CODESTRATA<-"A"
-#TAn[which(TAn$DEPTH>50  & TAn$DEPTH<=100),]$CODESTRATA<-"B"
-#TAn[which(TAn$DEPTH>100 & TAn$DEPTH<=200),]$CODESTRATA<-"C"
-#TAn[which(TAn$DEPTH>200 & TAn$DEPTH<=500),]$CODESTRATA<-"D"
-#TAn[which(TAn$DEPTH>500),                 ]$CODESTRATA<-"E"
-
-# Actually no samples at that Depth
-
-
-#----------------------------------------------------
-# Adjust lengths based on unit
-# What is LENGTH_CLASSES_CODE?
-if(len.unit=="cm"){
-  TCn$length <- ifelse(TCn$LENGTH_CLASSES_CODE=="M", TCn$LENGTH_CLASS/10, TCn$LENGTH_CLASS)
-} else {
-  TCn$length <- ifelse(TCn$LENGTH_CLASSES_CODE!="M", TCn$LENGTH_CLASS*10, TCn$LENGTH_CLASS)
-}
-
-# Standardise
-# See page 56 of MEDITS manual 2012
-
-# GSA is split into several zones (CODEZONE) in medstrata
-# Each zone has 5 depths (the STRATA)
-# Need to combine across zones, keeping strata separate
-# Total area of each strata, summing across zones
-strata_weight <- ddply(medstrata, .(AREA, CODESTRATA), summarise, TOTAL_STRATA_AREA = sum(AREASTRATA))
-
-#temp <- medstrata[,sum(AREASTRATA), by=list(AREA,CODESTRATA)]
-
-# Get weight of each strata in each area: Wk
-strata_weight <- ddply(strata_weight, .(AREA), transform, STRATA_WEIGHT = TOTAL_STRATA_AREA / sum(TOTAL_STRATA_AREA))
-
-# Get total swept area of hauls in each strata: Ak
-# First join TA with MEDITS strata info 
-# Joins by AREA, COUNTRY, NSTRATE
-#TAn <- join(TAn, medstrata)
-#temp <- join(TAn, medstrata) # mismatch between COUNTRY+NSTRATE in TAn and medstrata - TAn has SLOVENIA and CROATIA
-#temp <- join(TAn, medstrata, by="NSTRATE") # Now we have two Country
-TAn <- join(TAn, medstrata[,c("NSTRATE", "AREASTRATA", "CODESTRATA"), with=FALSE], by="NSTRATE") # Now we have two Country
-
-
-#TAnd <- as.data.frame(TAn)
-#medstratad <- as.data.frame(medstrata)
-#temp <- merge(TAnd, medstratad)
-# Now TAn has CODESTRATA
-# Calc SWEPT AREA of each haul in TAn
-# Calculate swept area, adjust units of measure to km 
-# Wing opening is measured in decimeteres and distance in meters, then:
-TAn$DISTANCE<-as.numeric(as.character(TAn$DISTANCE))
-TAn$WING_OPENING<-as.numeric(as.character(TAn$WING_OPENING))
-TAn$SWEPT<-(TAn$DISTANCE *((TAn$WING_OPENING)/10000))/1000 #Swept area in Km^2
-# Get total swept area of hauls in each stratum
-total_swept <- ddply(TAn, .(YEAR, AREA, CODESTRATA), summarise, TOTAL_AREA_SWEPT=sum(SWEPT))
-
-# Add SPECIES
-# Sum N across hauls for each strata and length
-# Join GENUS and SPECIES columns
-TCn$SP <- paste(TCn$GENUS, TCn$SPECIES)
-# Raise the measured sample to the whole catch in the haul
-TCn$NBLEN.sample.raised <- TCn$NBLEN*TCn$WEIGHT_OF_THE_FRACTION/TCn$WEIGHT_OF_THE_SAMPLE_MEASURED
-# Need CODESTRATA in TC table
-# Join TC with TA to bring CODESTRATA into TC
-# Joins by COUNTRY, AREA, YEAR, HAUL_NUMBER
-TCn <- join(TCn, TAn[,c("YEAR", "COUNTRY", "AREA", "HAUL_NUMBER", "CODESTRATA"), with=FALSE])
-
-# This should be a sanity check at the beginning
-# Join is bad as not all hauls in TC are in TA - this is a data problem
-# Anyway of determining Haul info (codestrata) from TCn?
-temp <- join(TCn, TAn[,c("YEAR", "COUNTRY", "AREA", "HAUL_NUMBER", "CODESTRATA"), with=FALSE])
-unique(TAn$HAUL_NUMBER) # No Haul 83
-all(unique(TCn$HAUL_NUMBER) %in% unique(TAn$HAUL_NUMBER))
-unique(TCn$HAUL_NUMBER)[which(!(unique(TCn$HAUL_NUMBER) %in% unique(TAn$HAUL_NUMBER)))]
-subset(TAn, HAUL_NUMBER==83)
-subset(TCn, HAUL_NUMBER==83)
-# Hence join is bad - NA in CODESTRATA
-# What do we do in this case?
-# Flag it up - can we correct? Depends on how many hauls are missing?
-# Assign them to another strata?
-
-
-# TCn now has CODESTRATA
-
-# Calculate the mean N per area (by length and stratum)
-mean_n <- ddply(TCn, .(YEAR, AREA, CODESTRATA, SP, LENGTH_CLASS), summarise, TOTAL_N = sum(NBLEN.sample.raised))
-# Bring in the total swept area in each stratum
-mean_n <- join(mean_n, total_swept)
-mean_n$MEAN_N <- mean_n$TOTAL_N / mean_n$TOTAL_AREA_SWEPT
-
-# Multiply the mean n by the weight of the strata by the 
-mean_n <- join(mean_n, strata_weight)
-mean_n$WEIGHTED_MEAN_N <- mean_n$MEAN_N * mean_n$STRATA_WEIGHT
-
-# Sum over strata
-# By SEX?
-index <- ddply(mean_n, .(AREA, YEAR, SP, LENGTH_CLASS), summarise, data = sum(WEIGHTED_MEAN_N))
 
 
 
 
 
-#mb11 <- subset(index, SP == "MULL BAR" & AREA == 11)
+
+
+
+
+
 
 
 
