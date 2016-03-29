@@ -36,11 +36,11 @@ library(plyr) # Needed for join
 
 # Set these for your computer
 # Location of TA, TB, TC and Medits Strata tables
-datadir <- "../../../tables/medits/"
+datadir <- "medits/medits/"
 
 # Where do you want the results to go
-outdir <- "../../../medits_lfd_test/data"
-plotdir <- "../../../medits_lfd_test/figures"
+outdir <- "medits_lfd_test/tables/"
+plotdir <- "medits_lfd_test/plots/"
 
 # Have these in a data frame?
 # Might be easier
@@ -52,11 +52,18 @@ plotdir <- "../../../medits_lfd_test/figures"
 #                     len_unit = c(rep("cm",3), "mm"))
 
 
-wanted <- data.frame(genus = c("MERL", "MERL", "MULL"),
-                     species = c("MER", "MER", "BAR"),
-                     gsa = c(9, 11, 9),
-                     sex_split = c(FALSE, TRUE,FALSE),
-                     len_unit = c(rep("cm",3)))
+#wanted <- data.frame(genus = c("MERL", "MERL", "MULL"),
+#                     species = c("MER", "MER", "BAR"),
+#                     gsa = c(9, 11, 9),
+#                     sex_split = c(FALSE, TRUE,FALSE),
+#                     len_unit = c(rep("cm",3)))
+
+# Silvia test
+wanted <- data.frame(genus = c("MERL"),
+                     species = c("MER"),
+                     gsa = c(16),
+                     sex_split = c(FALSE),
+                     len_unit = c("cm"))
 
 
 plots <- TRUE
@@ -97,6 +104,9 @@ TCn$LENGTH_CLASS<-as.numeric(as.character(TCn$LENGTH_CLASS))
 TCn$SP <- paste(TCn$GENUS, TCn$SPECIES)
 
 
+# Hack for MERL MER in GSA 16 in 2014
+TCn <- subset(TCn, !((AREA == 16) & (YEAR == 2014)))
+
 # Do these go here - can flag up which species if put in loop below
 # Checks
 # Check if there are duplicated rows in the files
@@ -112,21 +122,50 @@ if (!all(TAn$WING_OPENING > 0)){
 }
 
 # Load MEDITS strata dataframe
-medstrata<-fread(paste0(datadir,"MEDITS_Strata.csv"), sep=",", header=T)
+medstrata<-fread(paste0(datadir,"MEDITS_Strata.csv"), sep=";", header=T)
 names(medstrata)[3:5]<-c("NSTRATE", "CODEZONE","DEPTHSTRATA")
+
+
+# Notes for Silvia - we have lots of -1 in NSTRATE
+#subset(TAn, NSTRATE==-1)$COUNTRY
 
 #-------------------------------------------------------------
 # The MEDITS methodology
 # See page 56 of MEDITS manual 2012
 
-# Pull MEDITS strata into TA 
+# Pull MEDITS strata data into TA (the columns AREASTRATA and CODESTRATA)
 # Joins by NSTRATE (which is unique in TAn)
 # Check before join that all of the NSTRATE values in TA also exist in medstra - else merge will fail
 if(!all(TAn$NSTRATE %in% medstrata$NSTRATE)){
-    stop("Not all strata numbers in TA are in the MEDITS strata table (some missing values or -1?).\n")
+    warning("Not all strata numbers in TA are in the MEDITS strata table (some missing values or -1?). Attempting to join by DEPTH and GSA\n")
+    # NSTRATE is a unique identifier - but if NSTRATE is empty in TA then we could try to join by DEPTH and GSA
+    # Need to set CODESTATA to match with medstrata
+    # Assign the depth strata code (CODESTRATA) using mean depth values (DEPTH)
+    # i.e "1-50m","51-100m","101-200m","201-500m","501-800m"
+    TAn$HAULING_DEPTH<-as.numeric(as.character(TAn$HAULING_DEPTH))
+    TAn$SHOOTING_DEPTH<-as.numeric(as.character(TAn$SHOOTING_DEPTH))
+    TAn$DEPTH<-(TAn$HAULING_DEPTH+TAn$SHOOTING_DEPTH)/2
+    TAn$CODESTRATA<-'-'
+    TAn[which(TAn$DEPTH>0   & TAn$DEPTH<=50), ]$CODESTRATA<-"A"
+    TAn[which(TAn$DEPTH>50  & TAn$DEPTH<=100),]$CODESTRATA<-"B"
+    TAn[which(TAn$DEPTH>100 & TAn$DEPTH<=200),]$CODESTRATA<-"C"
+    TAn[which(TAn$DEPTH>200 & TAn$DEPTH<=500),]$CODESTRATA<-"D"
+    TAn[which(TAn$DEPTH>500),                 ]$CODESTRATA<-"E"
+    # Join by CODESTRATA and AREA, pulling in AREASTRATA from medstrata
+    pre_dim <- dim(TAn)
+    TAn <- join(TAn, medstrata[,c("AREASTRATA", "AREA", "CODESTRATA"), with=FALSE], by=c("AREA", "CODESTRATA"))
+    if(dim(TAn)[1] != pre_dim[1]){
+        stop("Merging medstrata and TAn has gone wrong. Number of rows of TAn have changed\n")
+    }
+} else {
+    # Joining by NSTRATE
+    TAn <- join(TAn, medstrata[,c("NSTRATE", "AREASTRATA", "CODESTRATA"), with=FALSE], by="NSTRATE")
+    # Now TAn has CODESTRATA and AREASTRATA
 }
-TAn <- join(TAn, medstrata[,c("NSTRATE", "AREASTRATA", "CODESTRATA"), with=FALSE], by="NSTRATE")
-# Now TAn has CODESTRATA and AREASTRATA
+# Check that we have AREASTRATA for each entry
+if(any(is.na(TAn$AREASTRATA))){
+    stop("Some NAs in AREASTRATA column of TAn\n")
+}
 
 # Calc SWEPT AREA of each haul in TAn and adjust units of measure to km 
 # Wing opening is measured in decimeteres and distance in meters, then:
@@ -147,7 +186,8 @@ strata_weight <- ddply(medstrata, .(AREA, CODESTRATA), summarise, TOTAL_STRATA_A
 # Finally get weight of each strata in each area: Wk
 strata_weight <- ddply(strata_weight, .(AREA), transform, STRATA_WEIGHT = TOTAL_STRATA_AREA / sum(TOTAL_STRATA_AREA))
 
-# Now process wanted row by row
+
+# Process each wanted species and GSA separately
 for (wanted_count in 1:nrow(wanted)){
     cat("Processing", as.character(wanted$genus[wanted_count]), as.character(wanted$species[wanted_count]), "in gsa" , wanted$gsa[wanted_count],"\n")
     TCsub <- subset(TCn, AREA==wanted$gsa[wanted_count] & SPECIES==wanted$species[wanted_count] & GENUS==wanted$genus[wanted_count])
@@ -182,31 +222,48 @@ for (wanted_count in 1:nrow(wanted)){
     if (wanted$sex_split[wanted_count]==TRUE){
         species_file_name <- paste(wanted$genus[wanted_count], wanted$species[wanted_count],wanted$gsa[wanted_count], "SEX",sep="_")
         index <- ddply(mean_n, .(AREA, YEAR, GENUS, SPECIES, SEX, LENGTH_CLASS), summarise, data = sum(WEIGHTED_MEAN_N))
-    }
-    else {
+    } else {
         species_file_name <- paste(wanted$genus[wanted_count], wanted$species[wanted_count],wanted$gsa[wanted_count], sep="_")
         index <- ddply(mean_n, .(AREA, YEAR, GENUS, SPECIES, LENGTH_CLASS), summarise, data = sum(WEIGHTED_MEAN_N))
     }
+
+    # Pad out index so that each year has the same length classes - not sure it's a good idea but comparable with previous method
+    unique_lengths <- unique(index$LENGTH_CLASS)
+    unique_years <- unique(index$YEAR)
+    if(!wanted$sex_split[wanted_count]){
+        padded_index <- expand.grid(LENGTH_CLASS = unique_lengths, YEAR = unique_years)
+    } else {
+        unique_sex <- unique(index$SEX)
+        padded_index <- expand.grid(LENGTH_CLASS = unique_lengths, YEAR = unique_years, SEX=unique_sex)
+    }
+    padded_index$GENUS <- index$GENUS[1]
+    padded_index$SPECIES <- index$SPECIES[1]
+    padded_index$AREA <- index$AREA[1]
+    # Bring in index into the padded_index
+    padded_index <- join(padded_index, index)
+    padded_index <- padded_index[order(padded_index$YEAR, padded_index$LENGTH_CLASS),] 
+    padded_index[is.na(padded_index$data),"data"] <- 0 # Probably a bad idea
+    index <- padded_index
     
     # Save output
     save(index,file=paste0(outdir,"/stratified_Nlen_",species_file_name,".Rdata"))
 
-    
     # Generate plots
     if (plots == TRUE){
+        # For boxplot data
+        tmp <- as.data.frame(TCn)
+        box_data <-tmp[rep(row.names(tmp),round(tmp$NBLEN.sample.raised)),]  # duplicate rows
         if  (wanted$len_unit[wanted_count]=="cm") {
             p <- ggplot(index, aes(y=data, x=LENGTH_CLASS/10))
-            p2 <- ggplot(index, aes(y=LENGTH_CLASS/10, x=factor(YEAR)))
-        }
-        else {
+            p2 <- ggplot(box_data, aes(y=LENGTH_CLASS/10, x=factor(YEAR)))
+        } else {
             p <- ggplot(index, aes(y=data, x=LENGTH_CLASS))
-            p2 <- ggplot(index, aes(y=LENGTH_CLASS, x=factor(YEAR)))
+            p2 <- ggplot(box_data, aes(y=LENGTH_CLASS, x=factor(YEAR)))
         } 
         # set the graph title
         if  (wanted$sex_split[wanted_count]==FALSE) {
             tt <- ggtitle(paste0(wanted$genus[wanted_count], " ", wanted$species[wanted_count],": GSA",wanted$gsa[wanted_count],"\n"))
-        }
-        else {
+        } else {
             tt <- ggtitle(paste0(wanted$genus[wanted_count], " ", wanted$species[wanted_count], ", sex"," : GSA",wanted$gsa[wanted_count],"\n"))
         } 
         # plot the histogram
@@ -215,8 +272,7 @@ for (wanted_count in 1:nrow(wanted)){
             theme(legend.position="none")
         if  (wanted$sex_split[wanted_count]==FALSE) {
             p <- p + facet_wrap(~YEAR)
-        }
-        else{
+        } else{
             p <- p + facet_grid(YEAR~SEX)
         }
         print(p)
@@ -236,62 +292,53 @@ for (wanted_count in 1:nrow(wanted)){
     }
 }
 
+# Results here only include lengths for which there are measurements.
+# If there is a length class in a particular year that has no measurement, then it is excluded from the data.frame
+# i.e. the data.frame does not expand to have same length classes for each year
+# Gives different results to old LFD.R script 
+
 #--------------------------------------------------------------
 
 
-# Include?
-# Correct Latitude and Longitude for mapping
-# Estimate mid point in Haul and convert to Decimal Degrees for plotting
-lat_start<-as.numeric(as.character(TAn$SHOOTING_LATITUDE))
-lon_start<-as.numeric(as.character(TAn$SHOOTING_LONGITUDE))
-LatStartSec = (lat_start - floor(lat_start))/100;
-LonStartSec = (lon_start - floor(lon_start))/100;
-LatStartDeg = floor(floor(lat_start)/100);
-LonStartDeg = floor(floor(lon_start)/100);
-LatStartMin = (floor(lat_start)/100 - LatStartDeg)/60*100;
-LonStartMin = (floor(lon_start)/100 - LonStartDeg)/60*100;
-lat_end<-as.numeric(as.character(TAn$HAULING_LATITUDE))
-lon_end<-as.numeric(as.character(TAn$HAULING_LONGITUDE))
-LatEndSec = (lat_end - floor(lat_end))/100;
-LonEndSec = (lon_end - floor(lon_end))/100;
-LatEndDeg = floor(floor(lat_end)/100);
-LonEndDeg = floor(floor(lon_end)/100);
-LatEndMin = (floor(lat_end)/100 - LatEndDeg)/60*100;
-LonEndMin = (floor(lon_end)/100 - LonEndDeg)/60*100;
-lat_start2 = LatStartDeg + LatStartMin + LatStartSec;
-lon_start2 = LonStartDeg + LonStartMin + LonStartSec;
-lat_end2 = LatEndDeg + LatEndMin + LatEndSec;
-lon_end2 = LonEndDeg + LonEndMin + LonEndSec;
-lat_start = lat_start2;
-lon_start = lon_start2;
-# use the quadrant to identify negative longitudes
-lon_start<-ifelse(TAn$SHOOTING_QUADRANT==7, lon_start*-1, lon_start)
-lat_end = lat_end2;
-lon_end = lon_end2;
-# use the quadrant to identify negative longitudes
-lon_end<-ifelse(TAn$HAULING_QUADRANT==7, lon_end*-1, lon_end)
-#FIXED MID HAUL POSITION
-lat = (lat_start+lat_end)/2 
-lon = (lon_start+lon_end)/2 
-TAn$Latitude<-lat
-TAn$Longitude<-lon
+## Include for mapping?
+## Correct Latitude and Longitude for mapping
+## Estimate mid point in Haul and convert to Decimal Degrees for plotting
+#lat_start<-as.numeric(as.character(TAn$SHOOTING_LATITUDE))
+#lon_start<-as.numeric(as.character(TAn$SHOOTING_LONGITUDE))
+#LatStartSec = (lat_start - floor(lat_start))/100;
+#LonStartSec = (lon_start - floor(lon_start))/100;
+#LatStartDeg = floor(floor(lat_start)/100);
+#LonStartDeg = floor(floor(lon_start)/100);
+#LatStartMin = (floor(lat_start)/100 - LatStartDeg)/60*100;
+#LonStartMin = (floor(lon_start)/100 - LonStartDeg)/60*100;
+#lat_end<-as.numeric(as.character(TAn$HAULING_LATITUDE))
+#lon_end<-as.numeric(as.character(TAn$HAULING_LONGITUDE))
+#LatEndSec = (lat_end - floor(lat_end))/100;
+#LonEndSec = (lon_end - floor(lon_end))/100;
+#LatEndDeg = floor(floor(lat_end)/100);
+#LonEndDeg = floor(floor(lon_end)/100);
+#LatEndMin = (floor(lat_end)/100 - LatEndDeg)/60*100;
+#LonEndMin = (floor(lon_end)/100 - LonEndDeg)/60*100;
+#lat_start2 = LatStartDeg + LatStartMin + LatStartSec;
+#lon_start2 = LonStartDeg + LonStartMin + LonStartSec;
+#lat_end2 = LatEndDeg + LatEndMin + LatEndSec;
+#lon_end2 = LonEndDeg + LonEndMin + LonEndSec;
+#lat_start = lat_start2;
+#lon_start = lon_start2;
+## use the quadrant to identify negative longitudes
+#lon_start<-ifelse(TAn$SHOOTING_QUADRANT==7, lon_start*-1, lon_start)
+#lat_end = lat_end2;
+#lon_end = lon_end2;
+## use the quadrant to identify negative longitudes
+#lon_end<-ifelse(TAn$HAULING_QUADRANT==7, lon_end*-1, lon_end)
+##FIXED MID HAUL POSITION
+#lat = (lat_start+lat_end)/2 
+#lon = (lon_start+lon_end)/2 
+#TAn$Latitude<-lat
+#TAn$Longitude<-lon
 
 #----------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-ggplot(index, aes(x=LENGTH_CLASS, y=data)) +geom_bar(stat="identity") + facet_wrap(~YEAR)
+#ggplot(index, aes(x=LENGTH_CLASS, y=data)) +geom_bar(stat="identity") + facet_wrap(~YEAR)
 
 
 
