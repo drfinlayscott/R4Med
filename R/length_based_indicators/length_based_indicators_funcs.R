@@ -113,16 +113,16 @@ get_lc <- function(dat, plot_fit=FALSE, main=""){
     return(lc)
 }
 
-plot_dist_lc <- function(sp_gsa, dat, max_length=NA){
-    dat <- dat[year %in% sp_gsa$years]
-    lcs <- get_lc(sp_gsa, dat)
-    sp <- sp_gsa[["sp"]]
-    gsas <- sp_gsa[["gsas"]]
-    p <- plot_dist(sp_gsa=sp_gsa, dat=dat, max_length=max_length)
-    lcsm <- melt(lcs, id.var="year", variable.name="Lc")
-    p <- p + geom_vline(data=lcsm, aes(xintercept=value, colour=Lc))
-    return(p)
-}
+#plot_dist_lc <- function(sp_gsa, dat, max_length=NA){
+#    dat <- dat[year %in% sp_gsa$years]
+#    lcs <- get_lc(sp_gsa, dat)
+#    sp <- sp_gsa[["sp"]]
+#    gsas <- sp_gsa[["gsas"]]
+#    p <- plot_dist(sp_gsa=sp_gsa, dat=dat, max_length=max_length)
+#    lcsm <- melt(lcs, id.var="year", variable.name="Lc")
+#    p <- p + geom_vline(data=lcsm, aes(xintercept=value, colour=Lc))
+#    return(p)
+#}
 
 get_indicators <- function(dat, linf, lc_choice = "fit"){
     if (!(lc_choice %in% c("fit","emp"))){
